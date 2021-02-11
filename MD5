@@ -1,12 +1,12 @@
-233b79a9a8ef0bbc62ab697d6e4b9f4d *DESCRIPTION
+dc64cd089121f9a07d29ddb6ee65f0d7 *DESCRIPTION
 aba43adca6a2de8c18f6575901a163e8 *NAMESPACE
-71fe55b5aee95a831a37d38e90d3f4de *NEWS.md
+89a056e157d810f2d4d10875733e98a6 *NEWS.md
 45a73fe0565885e1ce3e6e2d36127211 *R/checkargs.R
 42622731ba4f2f8c7420ecdbe7edf779 *R/perror.R
 40ab2050bbccfb6ee0ccfbab466e92bc *R/qerror.R
-8ad1f60886e84e1969945e78c51d8ffe *R/quantforesterror.R
-19186436102ea3dde7ffe96efced009c *README.md
-9ac47055353520b0a588cb57a4f51e37 *inst/CITATION
+4500eddf4d377a3052aca5325e1ba93b *R/quantforesterror.R
+e86d8a090ca82ce15eddecd13c652b10 *README.md
+0b1b55119dfd3e802a55882cb1f54afc *inst/CITATION
 4a36a8e5cd03754ba761b9ea80e8e3da *man/perror.Rd
 a69349407b5d36ef1a7758e2d00c062b *man/qerror.Rd
 dbcec48563f0b33d302e16a3dfa5029c *man/quantForestError.Rd

@@ -1,9 +1,13 @@
 # forestError: A Unified Framework for Random Forest Prediction Error Estimation
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
+### Version 1.0.0 Update
+
+This package has been updated to reflect the conventional sign of bias (mean prediction minus mean response). Previous versions of the package returned negative bias (mean response minus mean prediction). The sign of any algebraic operations involving the bias outputted by this package must therefore be reversed to preserve their intended effect.
+
 ### Overview
 
-The `forestError` package estimates conditional mean squared prediction errors, conditional biases, conditional prediction intervals, and conditional error distributions for random forest predictions using the plug-in method introduced in Lu and Hardin (2019+). These estimates are conditional on the test observations' predictor values, accounting for possible response heterogeneity, random forest prediction bias, and random forest prediction variability across the predictor space.
+The `forestError` package estimates conditional mean squared prediction errors, conditional biases, conditional prediction intervals, and conditional error distributions for random forest predictions using the plug-in method introduced in Lu and Hardin (2021). These estimates are conditional on the test observations' predictor values, accounting for possible response heterogeneity, random forest prediction bias, and random forest prediction variability across the predictor space.
 
 In its current state, the main function in this package accepts regression random forests built using any of the following packages:
 
@@ -65,4 +69,4 @@ See `DESCRIPTION` for information.
 Benjamin Lu and Johanna Hardin
 
 ### References
-* B. Lu and J. Hardin. A unified framework for random forest prediction error estimation. arXiv:1912.07435, 2019+. [[arXiv](https://arxiv.org/abs/1912.07435)]
+* Benjamin Lu and Johanna Hardin. A Unified Framework for Random Forest Prediction Error Estimation. Journal of Machine Learning Research, 22(8):1-41, 2021. [[Link](https://jmlr.org/papers/v22/18-558.html)]
