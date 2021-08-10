@@ -10,8 +10,11 @@ quantForestError(
   X.train,
   X.test,
   Y.train = NULL,
-  what = c("mspe", "bias", "interval", "p.error", "q.error"),
+  what = if (grepl("class", c(forest$type, forest$family, forest$treetype), TRUE))
+    "mcr" else c("mspe", "bias", "interval", "p.error", "q.error"),
   alpha = 0.05,
+  train_nodes = NULL,
+  return_train_nodes = FALSE,
   n.cores = 1
 )
 }
@@ -19,7 +22,7 @@ quantForestError(
 \item{forest}{The random forest object being used for prediction.}
 
 \item{X.train}{A \code{matrix} or \code{data.frame} with the observations
-that were used to train \code{forest}; each row should be an observation,
+that were used to train \code{forest}. Each row should be an observation,
 and each column should be a predictor variable.}
 
 \item{X.test}{A \code{matrix} or \code{data.frame} with the observations to
@@ -34,11 +37,22 @@ to train \code{forest}. Required if \code{forest} was created using
 \item{what}{A vector of characters indicating what estimates are desired.
 Possible options are conditional mean squared prediction errors (\code{"mspe"}),
 conditional biases (\code{"bias"}), conditional prediction intervals (\code{"interval"}),
-conditional error distribution functions (\code{"p.error"}), and
-conditional error quantile functions (\code{"q.error"}).}
+conditional error distribution functions (\code{"p.error"}), conditional
+error quantile functions (\code{"q.error"}), and conditional
+misclassification rate (\code{"mcr"}). Note that the conditional
+misclassification rate is available only for categorical outcomes, while
+the other parameters are available only for real-valued outcomes.}
 
 \item{alpha}{A vector of type-I error rates desired for the conditional prediction
 intervals; required if \code{"interval"} is included in \code{what}.}
+
+\item{train_nodes}{A \code{data.table} indicating what out-of-bag prediction
+errors each terminal node of each tree in \code{forest} contains. It should
+be formatted like the output of \code{findOOBErrors}. If not provided,
+it will be computed internally.}
+
+\item{return_train_nodes}{A boolean indicating whether to return the
+\code{train_nodes} computed and/or used.}
 
 \item{n.cores}{Number of cores to use (for parallel computation in \code{ranger}).}
 }
@@ -55,6 +69,8 @@ A \code{data.frame} with one or more of the following columns, as described
   prediction intervals for the test observations}
   \item{upper_alpha}{The estimated upper bounds of the conditional alpha-level
   prediction intervals for the test observations}
+  \item{mcr}{The estimated conditional misclassification rate of the random
+  forest predictions}
 
   In addition, one or both of the following functions, as described in the
   details section:
@@ -63,19 +79,23 @@ A \code{data.frame} with one or more of the following columns, as described
   conditional error distributions associated with the test predictions}
   \item{qerror}{The estimated quantile functions of the conditional error
   distributions associated with the test predictions}
+
+  In addition, if \code{return_train_nodes} is \code{TRUE}, then a \code{data.table}
+  called \code{train_nodes} indicating what out-of-bag prediction errors each
+  terminal node of each tree in \code{forest} contains.
 }
 \description{
-Estimates the conditional mean squared prediction errors, conditional biases,
-conditional prediction intervals, and conditional error distributions of
-random forest predictions.
+Estimates the conditional misclassification rates, conditional mean squared
+prediction errors, conditional biases, conditional prediction intervals, and
+conditional error distributions of random forest predictions.
 }
 \details{
-This function accepts regression random forests built using the \code{randomForest},
-\code{ranger}, \code{randomForestSRC}, and \code{quantregForest} packages.
-When training the random forest using \code{randomForest}, \code{ranger}, or
-\code{quantregForest}, \code{keep.inbag} must be set to \code{TRUE}. When
-training the random forest using \code{randomForestSRC}, \code{membership}
-must be set to \code{TRUE}.
+This function accepts classification or regression random forests built using
+the \code{randomForest}, \code{ranger}, \code{randomForestSRC}, and
+\code{quantregForest} packages. When training the random forest using
+\code{randomForest}, \code{ranger}, or \code{quantregForest}, \code{keep.inbag}
+must be set to \code{TRUE}. When training the random forest using
+\code{randomForestSRC}, \code{membership} must be set to \code{TRUE}.
 
 The predictions computed by \code{ranger} can be parallelized by setting the
 value of \code{n.cores} to be greater than 1.
@@ -86,16 +106,24 @@ the argument \code{what}. In particular, including \code{"mspe"} in \code{what}
 will add an additional column with the conditional mean squared prediction
 error of each test prediction to the \code{data.frame}; including \code{"bias"} in
 \code{what} will add an additional column with the conditional bias of each test
-prediction to the \code{data.frame}; and including \code{"interval"} in \code{what}
+prediction to the \code{data.frame}; including \code{"interval"} in \code{what}
 will add to the \code{data.frame} additional columns with the lower and
-upper bounds of conditional prediction intervals for each test prediction.
+upper bounds of conditional prediction intervals for each test prediction;
+and including \code{"mcr"} in \code{what} will add an additional column with
+the conditional misclassification rate of each test prediction to the
+\code{data.frame}. The conditional misclassification rate can be estimated
+only for classification random forests, while the other parameters can be
+estimated only for regression random forests.
 
-If \code{"p.error"} or \code{"q.error"} is included in \code{what}, then a
-list will be returned as output. The first element of the list, named
-\code{"estimates"}, is the \code{data.frame} described in the above paragraph. The
-other one or two elements of the list are the estimated cumulative distribution
-functions (\code{perror}) and/or the estimated quantile functions (\code{qerror})
-of the conditional error distributions associated with the test predictions.
+If \code{"p.error"} or \code{"q.error"} is included in \code{what}, or if
+\code{return_train_nodes} is set to \code{TRUE}, then a list will be returned
+as output. The first element of the list, named \code{"estimates"}, is the
+\code{data.frame} described in the above paragraph. The other elements of the
+list are the estimated cumulative distribution functions (\code{perror}) of
+the conditional error distributions, the estimated quantile functions
+(\code{qerror}) of the conditional error distributions, and/or a \code{data.table}
+indicating what out-of-bag prediction errors each terminal node of each tree
+in the random forest contains.
 }
 \examples{
 # load data
@@ -109,36 +137,49 @@ n <- nrow(airquality)
 response.col <- 1
 
 # split data into training and test sets
-train.ind <- sample(1:n, n * 0.9, replace = FALSE)
-Xtrain <- airquality[train.ind, -response.col]
-Ytrain <- airquality[train.ind, response.col]
-Xtest <- airquality[-train.ind, -response.col]
-Ytest <- airquality[-train.ind, response.col]
+train.ind <- sample(c("A", "B", "C"), n,
+                    replace = TRUE, prob = c(0.8, 0.1, 0.1))
+Xtrain <- airquality[train.ind == "A", -response.col]
+Ytrain <- airquality[train.ind == "A", response.col]
+Xtest1 <- airquality[train.ind == "B", -response.col]
+Xtest2 <- airquality[train.ind == "C", -response.col]
 
-# fit random forest to the training data
+# fit regression random forest to the training data
 rf <- randomForest::randomForest(Xtrain, Ytrain, nodesize = 5,
                                  ntree = 500,
                                  keep.inbag = TRUE)
 
 # estimate conditional mean squared prediction errors,
 # biases, prediction intervals, and error distribution
-# functions for the test observations
-output <- quantForestError(rf, Xtrain, Xtest,
-                           alpha = 0.05)
+# functions for the observations in Xtest1. return
+# train_nodes to avoid recomputation in the next
+# line of code.
+output1 <- quantForestError(rf, Xtrain, Xtest1,
+                            return_train_nodes = TRUE)
 
 # estimate just the conditional mean squared prediction errors
-# and prediction intervals for the test observations
-output <- quantForestError(rf, Xtrain, Xtest,
-                           what = c("mspe", "interval"),
-                           alpha = 0.05)
+# and prediction intervals for the observations in Xtest2.
+# avoid recomputation by providing train_nodes from the
+# previous line of code.
+output2 <- quantForestError(rf, Xtrain, Xtest2,
+                            what = c("mspe", "interval"),
+                            train_nodes = output1$train_nodes)
 
-# estimate just the conditional error distribution
-# functions for the test observations
-output <- quantForestError(rf, Xtrain, Xtest,
-                           what = c("p.error", "q.error"))
+# for illustrative purposes, convert response to categorical
+Ytrain <- as.factor(Ytrain > 31.5)
+
+# fit classification random forest to the training data
+rf <- randomForest::randomForest(Xtrain, Ytrain, nodesize = 3,
+                                 ntree = 500,
+                                 keep.inbag = TRUE)
+
+# estimate conditional misclassification rate of the
+# predictions of Xtest1
+output <- quantForestError(rf, Xtrain, Xtest1)
+
 }
 \seealso{
-\code{\link{perror}}, \code{\link{qerror}}
+\code{\link{perror}}, \code{\link{qerror}}, \code{\link{findOOBErrors}}
 }
 \author{
 Benjamin Lu \code{<b.lu@berkeley.edu>}; Johanna Hardin \code{<jo.hardin@pomona.edu>}
